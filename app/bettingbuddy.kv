@@ -1,0 +1,239 @@
+#:kivy 2.1.0
+#:import dp kivy.metrics.dp
+#:import get_color_from_hex kivy.utils.get_color_from_hex
+
+
+<Label>:
+    font_size: dp(14)
+    color: 0, 0, 0, 1
+    
+
+<Button>:
+    font_size: dp(14)
+    background_normal: ''
+    background_color: app.primary_color
+    color: 1, 1, 1, 1
+    size_hint_y: None
+    height: dp(40)
+    border: 0, 0, 0, 0
+
+
+<TextInput>:
+    font_size: dp(14)
+    multiline: False
+    padding: [dp(10), dp(5)]
+    background_color: 0.95, 0.95, 0.95, 1
+    foreground_color: 0.1, 0.1, 0.1, 1
+    cursor_color: app.primary_color
+    size_hint_y: None
+    height: dp(40)
+
+
+<Spinner>:
+    font_size: dp(14)
+    background_normal: ''
+    background_color: app.primary_color
+    color: 1, 1, 1, 1
+    size_hint_y: None
+    height: dp(40)
+
+
+<Switch>:
+    active_color: app.primary_color
+
+
+<ScrollView>:
+    bar_width: dp(10)
+    bar_color: app.primary_color
+    bar_inactive_color: 0.7, 0.7, 0.7, 0.5
+    effect_cls: "ScrollEffect"
+    scroll_type: ['bars', 'content']
+
+
+<NavigationBar>:
+    canvas.before:
+        Color:
+            rgba: app.primary_color
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+
+<HeaderBar>:
+    canvas.before:
+        Color:
+            rgba: app.primary_color
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    
+    title_label:
+        color: 1, 1, 1, 1
+        bold: True
+    
+    back_btn:
+        color: 1, 1, 1, 1
+
+
+<SummaryCard>:
+    canvas.before:
+        Color:
+            rgba: 0.95, 0.95, 0.95, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(5)]
+        
+        Color:
+            rgba: app.primary_color
+        Line:
+            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(5)]
+            width: 1
+
+
+<BetCard>:
+    canvas.before:
+        Color:
+            rgba: 0.95, 0.95, 0.95, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(5)]
+        
+        Color:
+            rgba: 0.8, 0.8, 0.8, 1
+        Line:
+            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(5)]
+            width: 0.5
+
+
+<ParlayCard>:
+    canvas.before:
+        Color:
+            rgba: 0.95, 0.95, 0.95, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(5)]
+        
+        Color:
+            rgba: 0.8, 0.8, 0.8, 1
+        Line:
+            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(5)]
+            width: 0.5
+
+
+<RecommendationCard>:
+    canvas.before:
+        Color:
+            rgba: 0.95, 0.95, 0.95, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(5)]
+        
+        Color:
+            rgba: app.accent_color
+        Line:
+            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(5)]
+            width: 1.5
+
+
+<FilterButton>:
+    font_size: dp(12)
+    size_hint_x: 0.25
+
+
+<LoadingScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: dp(20)
+        spacing: dp(20)
+        
+        Label:
+            text: 'BettingBuddy'
+            font_size: dp(24)
+            bold: True
+            size_hint_y: 0.3
+        
+        Image:
+            source: ''  # No image source needed
+            size_hint_y: 0.4
+        
+        Label:
+            text: root.loading_message
+            size_hint_y: 0.2
+        
+        BoxLayout:
+            size_hint_y: 0.1
+
+
+<AboutScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        
+        HeaderBar:
+            title: 'About BettingBuddy'
+            show_back: True
+            back_screen: 'settings'
+        
+        BoxLayout:
+            orientation: 'vertical'
+            padding: dp(20)
+            spacing: dp(20)
+            
+            Label:
+                text: 'BettingBuddy'
+                font_size: dp(24)
+                bold: True
+                size_hint_y: None
+                height: dp(40)
+            
+            Label:
+                text: root.version
+                size_hint_y: None
+                height: dp(30)
+            
+            ScrollView:
+                Label:
+                    text: root.about_text
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+                    padding: dp(10), dp(10)
+                    halign: 'left'
+                    valign: 'top'
+            
+            Button:
+                text: 'Back'
+                size_hint_y: None
+                height: dp(50)
+                on_release: root.manager.current = 'settings'
+
+
+<ErrorScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: dp(20)
+        spacing: dp(20)
+        
+        Label:
+            text: 'Error'
+            font_size: dp(24)
+            bold: True
+            size_hint_y: 0.2
+        
+        Label:
+            text: root.error_message
+            text_size: self.width, None
+            size_hint_y: 0.5
+            halign: 'center'
+        
+        Button:
+            text: 'Try Again'
+            size_hint: 0.5, 0.1
+            pos_hint: {'center_x': 0.5}
+            on_release: root.try_again()
+        
+        BoxLayout:
+            size_hint_y: 0.2

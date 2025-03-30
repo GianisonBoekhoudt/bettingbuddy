@@ -1,0 +1,33 @@
+workflows:
+  android-build:
+    name: Android Build
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      groups:
+        - keystore_credentials
+      vars:
+        PACKAGE_NAME: "org.bettingbuddy.app"
+      python: 3.9
+    scripts:
+      - name: Install dependencies
+        script: |
+          pip3 install --upgrade pip
+          pip3 install buildozer==1.5.0
+          pip3 install cython==0.29.33
+          brew install pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
+      - name: Set up environment
+        script: |
+          echo "Python version:"
+          python --version
+          echo "Buildozer version:"
+          buildozer --version
+      - name: Build Android APK
+        script: |
+          buildozer android debug
+    artifacts:
+      - bin/*.apk
+    publishing:
+      email:
+        recipients:
+          # Add your email address here after uploading to GitHub
