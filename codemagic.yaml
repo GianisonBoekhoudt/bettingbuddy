@@ -6,15 +6,21 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "org.bettingbuddy.app"
+      python: 3.9
     scripts:
       - name: Install dependencies
         script: |
           pip3 install --upgrade pip
+          pip3 install setuptools
+          pip3 install wheel
           pip3 install buildozer==1.5.0
           pip3 install cython==0.29.33
+          pip3 install distlib
+          pip3 install distutils-pytest
           brew install pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
       - name: Build Android APK
         script: |
+          pyenv global 3.9
           buildozer android debug
     artifacts:
       - bin/*.apk
