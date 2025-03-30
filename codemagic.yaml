@@ -30,4 +30,4 @@ workflows:
     publishing:
       email:
         recipients:
-          # Add your email address here after uploading to GitHub
+          - gianison.boekhoudt@icloud.com
