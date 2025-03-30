@@ -7,9 +7,15 @@ workflows:
       vars:
         PACKAGE_NAME: "org.bettingbuddy.app"
         PYTHONUNBUFFERED: "1"
-        BUILDOZER_SILENT: "1"
         P4A_IGNORE_DEPENDENCIES: "1"
     scripts:
+      - name: Setup Python 3.10
+        script: |
+          brew install pyenv
+          pyenv install 3.10.13
+          pyenv global 3.10.13
+          python3 --version
+          echo "Using Python $(python3 --version)"
       - name: Install dependencies
         script: |
           pip3 install --upgrade pip
@@ -17,22 +23,25 @@ workflows:
           pip3 install Cython==0.29.33
           brew install pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
           brew install automake libtool
-          pip3 install git+https://github.com/kivy/buildozer.git@master
-          pip3 install git+https://github.com/kivy/python-for-android.git@master
-      - name: Configure buildozer.spec
+      - name: Install Buildozer with Python 3.10
         script: |
-          cat buildozer.spec
-          echo "Modifying buildozer.spec to use latest p4a..."
-          sed -i '' 's/p4a.branch = master/p4a.branch = master/g' buildozer.spec
+          python3 -m pip install buildozer==1.5.0
+          python3 -m pip install git+https://github.com/kivy/python-for-android.git@develop
+      - name: Modify buildozer.spec to increase log level
+        script: |
+          echo "Setting log_level to 2 for detailed logging"
+          sed -i '' 's/log_level = 1/log_level = 2/g' buildozer.spec || echo "Could not find log_level setting"
+          grep -q "log_level" buildozer.spec || echo "log_level = 2" >> buildozer.spec
           cat buildozer.spec
       - name: Build Android APK
         script: |
-          echo "Generating custom debug keystore"
+          echo "Generating debug keystore"
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           mkdir -p ~/.android
           cp debug.keystore ~/.android/debug.keystore
-          echo "Starting buildozer build..."
-          buildozer android debug
+          
+          echo "Starting buildozer build with Python 3.10..."
+          python3 -m buildozer android debug -v
     artifacts:
       - bin/*.apk
     publishing:
