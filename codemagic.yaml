@@ -6,20 +6,32 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "org.bettingbuddy.app"
+        PYTHONUNBUFFERED: "1"
+        BUILDOZER_SILENT: "1"
+        P4A_IGNORE_DEPENDENCIES: "1"
     scripts:
-      - name: Set Python version and install dependencies
+      - name: Install dependencies
         script: |
-          brew install pyenv
-          pyenv install 3.9.13
-          pyenv global 3.9.13
-          python --version
           pip3 install --upgrade pip
           pip3 install setuptools wheel
-          pip3 install buildozer==1.5.0
-          pip3 install cython==0.29.33
+          pip3 install Cython==0.29.33
           brew install pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
+          brew install automake libtool
+          pip3 install git+https://github.com/kivy/buildozer.git@master
+          pip3 install git+https://github.com/kivy/python-for-android.git@master
+      - name: Configure buildozer.spec
+        script: |
+          cat buildozer.spec
+          echo "Modifying buildozer.spec to use latest p4a..."
+          sed -i '' 's/p4a.branch = master/p4a.branch = master/g' buildozer.spec
+          cat buildozer.spec
       - name: Build Android APK
         script: |
+          echo "Generating custom debug keystore"
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
+          echo "Starting buildozer build..."
           buildozer android debug
     artifacts:
       - bin/*.apk
