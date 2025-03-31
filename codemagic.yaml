@@ -38,6 +38,21 @@ workflows:
           rm -rf bin || true
           mkdir -p bin
           
+      - name: Use Codemagic's preinstalled Android SDK/NDK
+        script: |
+          echo "Available Android SDK/NDK on Codemagic:"
+          ls -la "$ANDROID_SDK_ROOT" || echo "Android SDK not found at ANDROID_SDK_ROOT"
+          ls -la "$ANDROID_NDK_HOME" || echo "Android NDK not found at ANDROID_NDK_HOME"
+          
+          # Use CodeMagic's NDK and SDK paths in buildozer.spec
+          sed -i '' 's/^android.sdk_path =.*/android.sdk_path = $ANDROID_SDK_ROOT/' buildozer.spec || echo "android.sdk_path = $ANDROID_SDK_ROOT" >> buildozer.spec
+          sed -i '' 's/^android.ndk_path =.*/android.ndk_path = $ANDROID_NDK_HOME/' buildozer.spec || echo "android.ndk_path = $ANDROID_NDK_HOME" >> buildozer.spec
+          
+          # Prevent buildozer from downloading NDK
+          sed -i '' 's/^android.ndk =.*/android.ndk = 25.1.8937393/' buildozer.spec
+          sed -i '' 's/^android.accept_sdk_license =.*/android.accept_sdk_license = True/' buildozer.spec || echo "android.accept_sdk_license = True" >> buildozer.spec
+          sed -i '' 's/^android.skip_update =.*/android.skip_update = True/' buildozer.spec || echo "android.skip_update = True" >> buildozer.spec
+          
       - name: Update buildozer.spec
         script: |
           echo "Updating buildozer.spec configuration..."
@@ -50,11 +65,25 @@ workflows:
           sed -i '' 's/^p4a.branch =.*/p4a.branch = develop/' buildozer.spec || echo "p4a.branch = develop" >> buildozer.spec
           sed -i '' 's/^android.api =.*/android.api = 33/' buildozer.spec
           sed -i '' 's/^android.sdk =.*/android.sdk = 33/' buildozer.spec
-          sed -i '' 's/^android.ndk =.*/android.ndk = 25.1.8937393/' buildozer.spec
           sed -i '' 's/^requirements =.*/requirements = python3,kivy==2.1.0,kivymd==1.1.1,requests,pillow==9.5.0,plyer,sqlite3,datetime,cairosvg/' buildozer.spec
           
           echo "Buildozer.spec after updates:"
           cat buildozer.spec
+          
+      - name: Set up files and directories for buildozer
+        script: |
+          # Create necessary directories to avoid downloads
+          mkdir -p $HOME/.buildozer/android/platform
+          
+          # Force use of existing SDK/NDK
+          echo "Creating buildozer.buildozer file to skip SDK/NDK download"
+          mkdir -p $HOME/.buildozer
+          cat > $HOME/.buildozer/.buildozer_settings.json << EOF
+          {"android_sdk": "$ANDROID_SDK_ROOT", "android_ndk": "$ANDROID_NDK_HOME"}
+          EOF
+          
+          # Display settings
+          cat $HOME/.buildozer/.buildozer_settings.json
           
       - name: Build Android APK
         script: |
@@ -67,6 +96,9 @@ workflows:
           # Set environment variables
           export P4A_IGNORE_DEPENDENCIES=1
           export PYTHONPATH=$PYTHONPATH:$PWD
+          export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
+          export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
           
           # Show installed packages
           echo "Installed pip packages:"
@@ -79,32 +111,26 @@ workflows:
       - name: Find and Copy APKs
         script: |
           echo "Searching for APK files..."
-          find $HOME/.buildozer -name "*.apk" -type f | tee apk_list.txt
+          find . -name "*.apk" -type f | tee apk_list.txt
           
           # Copy APKs to expected locations
           mkdir -p bin/
-          if [ -d "$HOME/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/bettingbuddy/build/outputs/apk/debug/" ]; then
-            cp $HOME/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/bettingbuddy/build/outputs/apk/debug/*.apk bin/ || echo "No APKs found in expected location"
-          fi
+          find . -name "*.apk" -type f -exec cp {} bin/ \; || echo "No APKs found"
           
-          # If specific path doesn't exist, do a broader search
+          # Create fake APK if none found (for debugging)
           if [ ! -f bin/*.apk ]; then
-            find $HOME/.buildozer -name "*.apk" -type f -exec cp {} bin/ \; || echo "No APKs found in buildozer directory"
+            echo "No APKs found, creating a placeholder for debugging"
+            echo "This is a placeholder file to indicate build issues" > bin/build-failed-no-apk.txt
           fi
           
           # List what we found
           echo "Contents of bin directory:"
           ls -la bin/
           
-          # Create an additional simple artifact for easier identification
-          if [ -f bin/*.apk ]; then
-            cp bin/*.apk bin/bettingbuddy-latest.apk || echo "Failed to create latest APK copy"
-          fi
-          
     artifacts:
-      - bin/*.apk
-      - bin/bettingbuddy-latest.apk
+      - bin/*
       - apk_list.txt
+      - buildozer.spec
     publishing:
       email:
         recipients:
