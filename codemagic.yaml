@@ -1,5 +1,5 @@
 workflows:
-  android-build:
+  android-workflow:  # Dit is nu de naam die Codemagic verwacht
     name: Android Build
     instance_type: mac_mini_m1
     max_build_duration: 60
