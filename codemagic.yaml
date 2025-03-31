@@ -20,24 +20,24 @@ workflows:
           echo "Creating project backup..."
           zip -r bin/bettingbuddy-project-files.zip * .* -x "*.git*" -x "*.buildozer*" || echo "Failed to create project backup"
           
-          # Create installation guide
+          # Create installation guide with proper escaping
           echo "Creating installation guide..."
-          cat > bin/INSTALLATION_GUIDE.txt << 'EOF'
-BettingBuddy Installation Guide
-
-Option 1: Install Demo App
-1. Download the bettingbuddy-demo.apk to your Android device
-2. Enable installation from unknown sources in your device settings
-3. Open the APK file to install
-
-Option 2: Build From Source
-1. Use Python-for-Android or Buildozer locally:
-   - Install Python 3.10
-   - Install Kivy and KivyMD
-   - Use buildozer android debug
-   
-Contact support for more detailed instructions.
-EOF
+          cat > bin/INSTALLATION_GUIDE.txt << EOF
+          BettingBuddy Installation Guide
+          
+          Option 1: Install Demo App
+          1. Download the bettingbuddy-demo.apk to your Android device
+          2. Enable installation from unknown sources in your device settings
+          3. Open the APK file to install
+          
+          Option 2: Build From Source
+          1. Use Python-for-Android or Buildozer locally:
+             - Install Python 3.10
+             - Install Kivy and KivyMD
+             - Use buildozer android debug
+             
+          Contact support for more detailed instructions.
+          EOF
           
           # List the contents of the bin directory
           echo "Contents of bin directory:"
