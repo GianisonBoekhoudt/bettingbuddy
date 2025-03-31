@@ -1,86 +1,111 @@
 workflows:
-  android-workflow:
+  android-build:
     name: Android Build
-    max_build_duration: 60
     instance_type: mac_mini_m1
+    max_build_duration: 60
     environment:
       vars:
         PACKAGE_NAME: "org.bettingbuddy.app"
+        PYTHONUNBUFFERED: "1"
+        P4A_IGNORE_DEPENDENCIES: "1"
     scripts:
-      - name: Set up Python environment
+      - name: Setup Python 3.10
+        script: |
+          brew install pyenv
+          pyenv install 3.10.13
+          pyenv global 3.10.13
+          python3 --version
+          echo "Using Python $(python3 --version)"
+          
+      - name: Install dependencies
         script: |
           pip3 install --upgrade pip
-          pip3 install --upgrade setuptools wheel
-          pip3 install --upgrade buildozer==1.5.0  # Use specific version
-          pip3 install --upgrade cython pillow
-          pip3 install cairosvg  # For SVG support
-
-      - name: Set up Android SDK
+          pip3 install setuptools wheel
+          pip3 install Cython==0.29.33
+          pip3 install buildozer==1.5.0
+          pip3 install pillow==9.5.0 cairosvg
+          pip3 install kivy==2.1.0 kivymd==1.1.1
+          brew install pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
+          brew install automake libtool
+          
+      - name: Install Buildozer with Python 3.10
         script: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
-          # Check NDK and SDK directories
-          ls -la $ANDROID_SDK_ROOT || echo "SDK not found"
-          ls -la $ANDROID_NDK_HOME || echo "NDK not found"
+          python3 -m pip install git+https://github.com/kivy/python-for-android.git@develop
           
       - name: Clean previous build
         script: |
           rm -rf .buildozer || true
           rm -rf bin || true
+          mkdir -p bin
+          
+      - name: Update buildozer.spec
+        script: |
+          echo "Updating buildozer.spec configuration..."
+          # Update log level
+          sed -i '' 's/log_level = 1/log_level = 2/g' buildozer.spec || echo "Could not find log_level setting"
+          grep -q "log_level" buildozer.spec || echo "log_level = 2" >> buildozer.spec
+          
+          # Update architecture and Android settings
+          sed -i '' 's/^android.arch =.*/android.arch = arm64-v8a/' buildozer.spec
+          sed -i '' 's/^p4a.branch =.*/p4a.branch = develop/' buildozer.spec || echo "p4a.branch = develop" >> buildozer.spec
+          sed -i '' 's/^android.api =.*/android.api = 33/' buildozer.spec
+          sed -i '' 's/^android.sdk =.*/android.sdk = 33/' buildozer.spec
+          sed -i '' 's/^android.ndk =.*/android.ndk = 25.1.8937393/' buildozer.spec
+          sed -i '' 's/^requirements =.*/requirements = python3,kivy==2.1.0,kivymd==1.1.1,requests,pillow==9.5.0,plyer,sqlite3,datetime,cairosvg/' buildozer.spec
+          
+          echo "Buildozer.spec after updates:"
+          cat buildozer.spec
           
       - name: Build Android APK
         script: |
+          # Generate debug keystore
+          echo "Generating debug keystore"
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
+          
           # Set environment variables
           export P4A_IGNORE_DEPENDENCIES=1
           export PYTHONPATH=$PYTHONPATH:$PWD
           
-          # Make buildozer spec changes directly
-          echo "Updating buildozer.spec..."
-          sed -i'.bak' 's/^android.arch =.*/android.arch = arm64-v8a/' buildozer.spec
-          sed -i'.bak' 's/^p4a.branch =.*/p4a.branch = develop/' buildozer.spec
-          sed -i'.bak' 's/^android.api =.*/android.api = 33/' buildozer.spec
-          sed -i'.bak' 's/^android.sdk =.*/android.sdk = 33/' buildozer.spec
-          sed -i'.bak' 's/^requirements =.*/requirements = python3,kivy==2.1.0,kivymd==1.1.1,requests,pillow==9.5.0,plyer,sqlite3,datetime,cairosvg/' buildozer.spec
-          
-          # Install required dependencies
-          echo "Installing Python dependencies..."
-          pip install --upgrade pip wheel setuptools
-          pip install cython==0.29.33 buildozer==1.5.0
-          pip install kivy==2.1.0 kivymd==1.1.1
-          pip install pillow==9.5.0 cairosvg
-          
           # Show installed packages
           echo "Installed pip packages:"
-          pip list
+          pip3 list
           
           # Run buildozer with more verbose output
-          echo "Running buildozer..."
-          python -m buildozer android debug -v
+          echo "Starting buildozer build with Python 3.10..."
+          python3 -m buildozer android debug -v
           
-          # Show output files
-          echo "APK build complete. Files in bin directory:"
+      - name: Find and Copy APKs
+        script: |
+          echo "Searching for APK files..."
+          find $HOME/.buildozer -name "*.apk" -type f | tee apk_list.txt
+          
+          # Copy APKs to expected locations
+          mkdir -p bin/
+          if [ -d "$HOME/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/bettingbuddy/build/outputs/apk/debug/" ]; then
+            cp $HOME/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/bettingbuddy/build/outputs/apk/debug/*.apk bin/ || echo "No APKs found in expected location"
+          fi
+          
+          # If specific path doesn't exist, do a broader search
+          if [ ! -f bin/*.apk ]; then
+            find $HOME/.buildozer -name "*.apk" -type f -exec cp {} bin/ \; || echo "No APKs found in buildozer directory"
+          fi
+          
+          # List what we found
+          echo "Contents of bin directory:"
           ls -la bin/
+          
+          # Create an additional simple artifact for easier identification
+          if [ -f bin/*.apk ]; then
+            cp bin/*.apk bin/bettingbuddy-latest.apk || echo "Failed to create latest APK copy"
+          fi
+          
     artifacts:
       - bin/*.apk
-      - $HOME/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/bettingbuddy/build/outputs/apk/debug/*.apk
-  
-  ios-workflow:
-    name: iOS Build
-    max_build_duration: 60
-    instance_type: mac_mini_m1
-    environment:
-      vars:
-        BUNDLE_ID: "org.bettingbuddy.app"
-        XCODE_WORKSPACE: "ios/BettingBuddy.xcworkspace"
-        XCODE_SCHEME: "BettingBuddy"
-    scripts:
-      - name: Set up Python environment
-        script: |
-          pip3 install --upgrade pip
-          pip3 install --upgrade kivy-ios
-      # Further iOS scripts would go here
-      - name: Build iOS (Simulated - not fully implemented)
-        script: |
-          echo "iOS build is not yet fully implemented"
-    artifacts:
-      - ios/build/Release-iphoneos/*.ipa
+      - bin/bettingbuddy-latest.apk
+      - apk_list.txt
+    publishing:
+      email:
+        recipients:
+          - gianison.boekhoudt@icloud.com
