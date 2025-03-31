@@ -9,33 +9,32 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          # Update Homebrew en installeer de vereiste packages
-          brew update
-          brew install python@3.10 openjdk@17
-          brew install pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
+          # Installeer Homebrew en afhankelijkheden
+          brew install python@3.10 openjdk@17 pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
 
-          # Zorg ervoor dat we de juiste Python-versie gebruiken
-          echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
-          source ~/.zshrc
+          # Maak en activeer een virtuele omgeving
+          python3 -m venv venv
+          source venv/bin/activate
 
-          # Upgrade pip en installeer de Python-pakketten
-          pip3 install --upgrade pip setuptools wheel
-          pip3 install buildozer cython virtualenv
+          # Upgrade pip en installeer de Buildozer dependencies binnen de virtuele omgeving
+          pip install --upgrade pip setuptools wheel
+          pip install buildozer cython virtualenv
+
+          echo "Virtuele omgeving geactiveerd en Buildozer geïnstalleerd."
 
       - name: Initialize Buildozer
         script: |
-          # Maak alleen de map en kopieer noodzakelijke bestanden
+          source venv/bin/activate  # Zorg ervoor dat de virtuele omgeving actief is
           mkdir -p $CM_BUILD_DIR/bettingbuddy
           cd $CM_BUILD_DIR/bettingbuddy
-          cp -r $CM_SOURCE/buildozer.spec .  # Alleen buildozer.spec kopiëren
-          cp -r $CM_SOURCE/src/* .  # Kopieer enkel de benodigde bestanden uit je source folder
-
+          cp -r $CM_SOURCE/* .
           if [ ! -f "buildozer.spec" ]; then
             buildozer init
           fi
 
       - name: Build APK
         script: |
+          source venv/bin/activate  # Zorg ervoor dat de virtuele omgeving actief is
           cd $CM_BUILD_DIR/bettingbuddy
           buildozer -v android debug
 
