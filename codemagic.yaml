@@ -9,11 +9,16 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3-pip python3-venv zip unzip
+          # Installeer Homebrew (indien nog niet geïnstalleerd)
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+          # Installeer de benodigde dependencies via Homebrew
+          brew install python@3.10
+          brew install openjdk@17
+
+          # Upgrade pip en installeer de benodigde Python-pakketten
           pip3 install --upgrade pip
           pip3 install buildozer cython virtualenv
-          sudo apt install -y openjdk-17-jdk
 
       - name: Initialize Buildozer
         script: |
