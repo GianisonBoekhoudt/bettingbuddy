@@ -1,5 +1,5 @@
 workflows:
-  android-workflow:  # Dit is nu de naam die Codemagic verwacht
+  android-workflow:
     name: Android Build
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -9,22 +9,27 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          # Installeer Homebrew (indien nog niet geïnstalleerd)
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          # Update Homebrew en installeer de vereiste packages
+          brew update
+          brew install python@3.10 openjdk@17
+          brew install pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
 
-          # Installeer de benodigde dependencies via Homebrew
-          brew install python@3.10
-          brew install openjdk@17
+          # Zorg ervoor dat we de juiste Python-versie gebruiken
+          echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
+          source ~/.zshrc
 
-          # Upgrade pip en installeer de benodigde Python-pakketten
-          pip3 install --upgrade pip
+          # Upgrade pip en installeer de Python-pakketten
+          pip3 install --upgrade pip setuptools wheel
           pip3 install buildozer cython virtualenv
 
       - name: Initialize Buildozer
         script: |
+          # Maak alleen de map en kopieer noodzakelijke bestanden
           mkdir -p $CM_BUILD_DIR/bettingbuddy
           cd $CM_BUILD_DIR/bettingbuddy
-          cp -r $CM_SOURCE/* .
+          cp -r $CM_SOURCE/buildozer.spec .  # Alleen buildozer.spec kopiëren
+          cp -r $CM_SOURCE/src/* .  # Kopieer enkel de benodigde bestanden uit je source folder
+
           if [ ! -f "buildozer.spec" ]; then
             buildozer init
           fi
