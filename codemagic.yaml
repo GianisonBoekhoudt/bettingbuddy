@@ -2,34 +2,38 @@ workflows:
   android-build:
     name: Android Build
     instance_type: mac_mini_m1
-    max_build_duration: 30
+    max_build_duration: 60
     environment:
       vars:
         PACKAGE_NAME: "org.bettingbuddy.app"
     scripts:
-      - name: Create Simple Package
+      - name: Install dependencies
         script: |
-          # Create directory for artifacts
-          mkdir -p bin
-          
-          # Download only the APK - skip other files
-          echo "Downloading Kivy Showcase demo APK..."
-          curl -L -o bin/bettingbuddy-demo.apk https://github.com/kivy/kivy/releases/download/2.1.0/Showcase-2.1.0-arm64-v8a-release.apk
-          
-          # Create a small text file instead of zipping the project
-          echo "Creating info file..."
-          cat > bin/info.txt << EOF
-          BettingBuddy Demo APK
-          This is a temporary demo APK based on the Kivy Showcase app.
-          EOF
-          
-          # List the contents of the bin directory
-          echo "Contents of bin directory:"
-          ls -la bin/
+          sudo apt update && sudo apt upgrade -y
+          sudo apt install -y python3-pip python3-venv zip unzip
+          pip3 install --upgrade pip
+          pip3 install buildozer cython virtualenv
+          sudo apt install -y openjdk-17-jdk
+
+      - name: Initialize Buildozer
+        script: |
+          mkdir -p $CM_BUILD_DIR/bettingbuddy
+          cd $CM_BUILD_DIR/bettingbuddy
+          cp -r $CM_SOURCE/* .
+          if [ ! -f "buildozer.spec" ]; then
+            buildozer init
+          fi
+
+      - name: Build APK
+        script: |
+          cd $CM_BUILD_DIR/bettingbuddy
+          buildozer -v android debug
+
     artifacts:
-      - bin/*.apk
-      - bin/*.txt
+      - $CM_BUILD_DIR/bettingbuddy/bin/*.apk
+      - $CM_BUILD_DIR/bettingbuddy/bin/*.aab
     publishing:
       email:
         recipients:
           - gianison.boekhoudt@icloud.com
+
