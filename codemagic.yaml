@@ -2,41 +2,25 @@ workflows:
   android-build:
     name: Android Build
     instance_type: mac_mini_m1
-    max_build_duration: 60
+    max_build_duration: 30
     environment:
       vars:
         PACKAGE_NAME: "org.bettingbuddy.app"
     scripts:
-      - name: Create Application Package
+      - name: Create Simple Package
         script: |
           # Create directory for artifacts
           mkdir -p bin
           
-          # Download the Kivy showcase app as a demo APK
+          # Download only the APK - skip other files
           echo "Downloading Kivy Showcase demo APK..."
-          curl -L -o bin/bettingbuddy-demo.apk https://github.com/kivy/kivy/releases/download/2.1.0/Showcase-2.1.0-arm64-v8a-release.apk || echo "Failed to download showcase APK"
+          curl -L -o bin/bettingbuddy-demo.apk https://github.com/kivy/kivy/releases/download/2.1.0/Showcase-2.1.0-arm64-v8a-release.apk
           
-          # Export your project files as a backup
-          echo "Creating project backup..."
-          zip -r bin/bettingbuddy-project-files.zip * .* -x "*.git*" -x "*.buildozer*" || echo "Failed to create project backup"
-          
-          # Create installation guide with proper escaping
-          echo "Creating installation guide..."
-          cat > bin/INSTALLATION_GUIDE.txt << EOF
-          BettingBuddy Installation Guide
-          
-          Option 1: Install Demo App
-          1. Download the bettingbuddy-demo.apk to your Android device
-          2. Enable installation from unknown sources in your device settings
-          3. Open the APK file to install
-          
-          Option 2: Build From Source
-          1. Use Python-for-Android or Buildozer locally:
-             - Install Python 3.10
-             - Install Kivy and KivyMD
-             - Use buildozer android debug
-             
-          Contact support for more detailed instructions.
+          # Create a small text file instead of zipping the project
+          echo "Creating info file..."
+          cat > bin/info.txt << EOF
+          BettingBuddy Demo APK
+          This is a temporary demo APK based on the Kivy Showcase app.
           EOF
           
           # List the contents of the bin directory
@@ -44,7 +28,6 @@ workflows:
           ls -la bin/
     artifacts:
       - bin/*.apk
-      - bin/*.zip
       - bin/*.txt
     publishing:
       email:
