@@ -1,41 +1,57 @@
 workflows:
   android-workflow:
     name: Android Build
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m1  # Wijzig naar 'mac_mini_m2' als er opslagproblemen blijven
     max_build_duration: 60
     environment:
       vars:
         PACKAGE_NAME: "org.bettingbuddy.app"
     scripts:
+      - name: Check available disk space
+        script: df -h  # Controleer beschikbare schijfruimte voordat de build start
+
+      - name: Cleanup old build files
+        script: |
+          echo "Verwijderen van oude buildbestanden om ruimte vrij te maken..."
+          rm -rf $HOME/.buildozer
+          rm -rf $CM_BUILD_DIR/bettingbuddy/.buildozer
+          echo "Cleanup voltooid."
+
       - name: Install dependencies
         script: |
-          # Installeer Homebrew en afhankelijkheden
+          echo "Installeren van afhankelijkheden..."
           brew install python@3.10 openjdk@17 pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
 
-          # Maak en activeer een virtuele omgeving
+          echo "Aanmaken en activeren van virtuele omgeving..."
           python3 -m venv venv
           source venv/bin/activate
 
-          # Upgrade pip en installeer de Buildozer dependencies binnen de virtuele omgeving
+          echo "Pip bijwerken en Buildozer installeren..."
           pip install --upgrade pip setuptools wheel
           pip install buildozer cython virtualenv
 
-          echo "Virtuele omgeving geactiveerd en Buildozer geïnstalleerd."
+          echo "Setup voltooid!"
 
       - name: Initialize Buildozer
         script: |
-          source venv/bin/activate  # Zorg ervoor dat de virtuele omgeving actief is
+          source venv/bin/activate
           mkdir -p $CM_BUILD_DIR/bettingbuddy
+          echo "Kopiëren van projectbestanden naar build-map..."
+          
+          # Kopieer alleen noodzakelijke bestanden om ruimte te besparen
+          rsync -av --exclude='bin' --exclude='__pycache__' --exclude='.git' $CM_SOURCE/ $CM_BUILD_DIR/bettingbuddy/
+          
           cd $CM_BUILD_DIR/bettingbuddy
-          cp -r $CM_SOURCE/* .
           if [ ! -f "buildozer.spec" ]; then
+            echo "Initialiseren van Buildozer..."
             buildozer init
           fi
 
       - name: Build APK
         script: |
-          source venv/bin/activate  # Zorg ervoor dat de virtuele omgeving actief is
+          source venv/bin/activate
           cd $CM_BUILD_DIR/bettingbuddy
+          echo "Starten van Buildozer Android build..."
           buildozer -v android debug
 
     artifacts:
@@ -45,4 +61,3 @@ workflows:
       email:
         recipients:
           - gianison.boekhoudt@icloud.com
-
