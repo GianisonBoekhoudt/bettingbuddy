@@ -52,6 +52,11 @@ workflows:
           source venv/bin/activate
           cd $CM_BUILD_DIR/bettingbuddy
           echo "Starten van Buildozer Android build..."
+
+          # Pas het Buildozer-spec bestand aan als dat nodig is
+          echo "Zorg ervoor dat buildozer.spec correct is ingesteld"
+          # Je kunt hier eventueel extra configuraties toevoegen
+
           buildozer -v android debug
 
     artifacts:
