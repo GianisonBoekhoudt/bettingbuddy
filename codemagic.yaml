@@ -1,67 +1,77 @@
 workflows:
   android-workflow:
     name: Android Build
-    instance_type: mac_mini_m1  # Wijzig naar 'mac_mini_m2' als er opslagproblemen blijven
+    instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
       vars:
-        PACKAGE_NAME: "org.bettingbuddy.app"
+        PACKAGE_NAME: "org.bettingbuddy"  # Match this with your buildozer.spec
     scripts:
       - name: Check available disk space
-        script: df -h  # Controleer beschikbare schijfruimte voordat de build start
+        script: df -h
 
       - name: Cleanup old build files
         script: |
-          echo "Verwijderen van oude buildbestanden om ruimte vrij te maken..."
+          echo "Cleaning up old build files..."
           rm -rf $HOME/.buildozer
           rm -rf $CM_BUILD_DIR/bettingbuddy/.buildozer
-          echo "Cleanup voltooid."
+          echo "Cleanup completed."
 
       - name: Install dependencies
         script: |
-          echo "Installeren van afhankelijkheden..."
+          echo "Installing dependencies..."
           brew install python@3.10 openjdk@17 pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer
 
-          echo "Aanmaken en activeren van virtuele omgeving..."
+          echo "Creating and activating virtual environment..."
           python3 -m venv venv
           source venv/bin/activate
 
-          echo "Pip bijwerken en Buildozer installeren..."
+          echo "Updating pip and installing Buildozer..."
           pip install --upgrade pip setuptools wheel
           pip install buildozer cython virtualenv
 
-          echo "Setup voltooid!"
+          echo "Setup completed!"
 
-      - name: Initialize Buildozer
+      - name: Prepare Build Directory
         script: |
           source venv/bin/activate
           mkdir -p $CM_BUILD_DIR/bettingbuddy
-          echo "Kopiëren van projectbestanden naar build-map..."
+          echo "Copying project files to build directory..."
           
-          # Kopieer alleen noodzakelijke bestanden om ruimte te besparen
+          # Copy only necessary files to save space
           rsync -av --exclude='bin' --exclude='__pycache__' --exclude='.git' $CM_SOURCE/ $CM_BUILD_DIR/bettingbuddy/
           
           cd $CM_BUILD_DIR/bettingbuddy
-          if [ ! -f "buildozer.spec" ]; then
-            echo "Initialiseren van Buildozer..."
-            buildozer init
+          
+          # Check if main.py exists
+          if [ ! -f "main.py" ]; then
+            echo "WARNING: main.py not found in project root!"
+            ls -la  # List files to debug
           fi
+          
+          echo "Using existing buildozer.spec file..."
 
       - name: Build APK
         script: |
           source venv/bin/activate
           cd $CM_BUILD_DIR/bettingbuddy
-          echo "Starten van Buildozer Android build..."
+          echo "Starting Buildozer Android build..."
 
-          # Pas het Buildozer-spec bestand aan als dat nodig is
-          echo "Zorg ervoor dat buildozer.spec correct is ingesteld"
-          # Je kunt hier eventueel extra configuraties toevoegen
-
+          # Display Buildozer version
+          buildozer --version
+          
+          # Explicitly clean before building to ensure fresh start
+          buildozer android clean
+          
+          # Build the APK in verbose mode
           buildozer -v android debug
+          
+          # List generated APK files
+          echo "Generated APK files:"
+          ls -la bin/
 
     artifacts:
       - $CM_BUILD_DIR/bettingbuddy/bin/*.apk
-      - $CM_BUILD_DIR/bettingbuddy/bin/*.aab
     publishing:
       email:
         recipients:
